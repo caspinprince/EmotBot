@@ -1,4 +1,4 @@
-#EmotBot
+# EmotBot
 
 This project intends to showcase my 
 [emotion detection ML API](https://github.com/caspinprince/emotion-detection) 
