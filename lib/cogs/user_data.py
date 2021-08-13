@@ -1,7 +1,8 @@
 from discord.ext import commands
 import sqlite3
-import lib.bot.emot_util as api_call
+import lib.bot.emot_util as emot_util
 import discord
+import lib.bot.message_util as message_util
 
 class EmotionCog(commands.Cog, name='User_Data'):
 
@@ -18,7 +19,7 @@ class EmotionCog(commands.Cog, name='User_Data'):
         cursor.execute(f"SELECT user_id FROM emotion_data WHERE guild_id = '{message.author.guild.id}'"
                        f"AND user_id = '{message.author.id}'")
         result = cursor.fetchone()
-        emotion = api_call.get_emotion(message.content)
+        emotion = emot_util.get_emotion(message.content)
 
         if result is None:
             sql = ("INSERT INTO emotion_data(guild_id, user_id, joy, sadness, anger, fear, love, surprise) "
@@ -26,16 +27,16 @@ class EmotionCog(commands.Cog, name='User_Data'):
             val = (message.author.guild.id, message.author.id, 0, 0, 0, 0, 0, 0)
             cursor.execute(sql, val)
             db.commit()
-        else:
-            cursor.execute(f"SELECT user_id, {emotion} FROM emotion_data "
-                           f"WHERE guild_id = '{message.author.guild.id}'"
-                           f"AND user_id = '{message.author.id}'")
-            result1 = cursor.fetchone()
-            current_value = int(result1[1])
-            sql = (f"UPDATE emotion_data SET {emotion} = ? WHERE guild_id = ? AND user_id = ?")
-            val = (current_value+1, str(message.guild.id), str(message.author.id))
-            cursor.execute(sql, val)
-            db.commit()
+
+        cursor.execute(f"SELECT user_id, {emotion} FROM emotion_data "
+                       f"WHERE guild_id = '{message.author.guild.id}'"
+                       f"AND user_id = '{message.author.id}'")
+        result1 = cursor.fetchone()
+        current_value = int(result1[1])
+        sql = (f"UPDATE emotion_data SET {emotion} = ? WHERE guild_id = ? AND user_id = ?")
+        val = (current_value+1, str(message.guild.id), str(message.author.id))
+        cursor.execute(sql, val)
+        db.commit()
 
     @commands.command()
     async def stats(self, ctx, user:discord.User = None):
@@ -45,20 +46,28 @@ class EmotionCog(commands.Cog, name='User_Data'):
             cursor.execute(f"SELECT joy, sadness, anger, fear, love, surprise FROM emotion_data "
                            f"WHERE guild_id = '{ctx.message.guild.id}' AND user_id = '{user.id}'")
             result = cursor.fetchone()
-            await ctx.send(str(result[0]))
+            user = user.name
+            icon = user.avatar_url
             cursor.close()
             db.close()
-        elif user is None:
+        else:
             db = sqlite3.connect('main.sqlite')
             cursor = db.cursor()
             cursor.execute(f"SELECT joy, sadness, anger, fear, love, surprise FROM emotion_data "
                            f"WHERE guild_id = '{ctx.message.guild.id}' AND user_id = '{ctx.message.author.id}'")
             result = cursor.fetchone()
-            await ctx.send(f">>> __**Emotion Stats for {ctx.message.author.display_name}**__\n\n"
-                           f"Joy: {str(result[0])}\nSadness: {str(result[1])}\nAnger: {str(result[2])}\n"
-                           f"Fear: {str(result[3])}\nLove: {str(result[4])}\nSurprise: {str(result[5])}")
+            user = ctx.message.author.display_name
+            icon = ctx.message.author.avatar_url
             cursor.close()
             db.close()
+        await ctx.send(embed=message_util.embed(user=user, icon=icon, title='__**Emotion Stats**__',
+                                                thumbnail='http://discord.com/assets/626aaed496ac12bbdb68a86b46871a1f.svg',
+                                                description = f"{emot_util.emoji['joy']} Joy: {str(result[0])}\n"
+                                                              f"{emot_util.emoji['sadness']} Sadness: {str(result[1])}\n"
+                                                              f"{emot_util.emoji['anger']} Anger: {str(result[2])}\n"
+                                                              f"{emot_util.emoji['fear']} Fear: {str(result[3])}\n"
+                                                              f"{emot_util.emoji['love']} Love: {str(result[4])}\n"
+                                                              f"{emot_util.emoji['surprise']} Surprise: {str(result[5])}"))
 
     @commands.command()
     async def reset(self, ctx):
@@ -75,6 +84,7 @@ class EmotionCog(commands.Cog, name='User_Data'):
             await ctx.send(':x: User stats could not be reset!')
         cursor.close()
         db.close()
+
 
 def setup(bot):
     bot.add_cog(EmotionCog(bot))

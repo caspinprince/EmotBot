@@ -9,7 +9,7 @@ import traceback
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
-bot = commands.Bot(command_prefix='$')
+bot = commands.Bot(command_prefix='$', help_command=None)
 
 @bot.event
 async def on_ready():
@@ -36,7 +36,7 @@ async def on_ready():
     ''')
     print(f'{bot.user} has connected to Discord!')
 
-initial_extensions = ['lib.cogs.user_data']
+initial_extensions = ['lib.cogs.general', 'lib.cogs.user_data']
 if __name__ == '__main__':
     for extension in initial_extensions:
         try:
@@ -44,14 +44,6 @@ if __name__ == '__main__':
         except Exception as e:
             print(f'Failed to load extension {extension}', file=sys.stderr)
             traceback.print_exc()
-
-
-@bot.command(name = 'emotion')
-async def emotion(ctx):
-    if ctx.author == bot.user:
-        return
-    emotion = emot_util.get_emotion(ctx.message.content)
-    await ctx.send(emot_util.emoji[emotion])
 
 bot.run(TOKEN)
 
