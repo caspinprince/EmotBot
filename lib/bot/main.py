@@ -8,20 +8,12 @@ import traceback
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
-
 bot = commands.Bot(command_prefix='$', help_command=None)
 
 @bot.event
 async def on_ready():
     db = sqlite3.connect('main.sqlite')
     cursor = db.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS main(
-        guild_id TEXT,
-        msg TEXT,
-        channel_id TEXT
-        );
-    ''')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS emotion_data(
             "guild_id"	TEXT,

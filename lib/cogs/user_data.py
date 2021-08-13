@@ -3,6 +3,7 @@ import sqlite3
 import lib.bot.emot_util as emot_util
 import discord
 import lib.bot.message_util as message_util
+from discord.utils import get
 
 class EmotionCog(commands.Cog, name='User_Data'):
 
@@ -11,7 +12,7 @@ class EmotionCog(commands.Cog, name='User_Data'):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if message.author == self.bot.user or message.content.startswith(('$', ';', '!', '/', '&', '@', '%')):
+        if message.author.bot or message.author == self.bot.user or message.content.startswith(('$', ';', '!', '/', '&', '@', '%')):
             return
 
         db = sqlite3.connect('main.sqlite')
@@ -46,7 +47,7 @@ class EmotionCog(commands.Cog, name='User_Data'):
             cursor.execute(f"SELECT joy, sadness, anger, fear, love, surprise FROM emotion_data "
                            f"WHERE guild_id = '{ctx.message.guild.id}' AND user_id = '{user.id}'")
             result = cursor.fetchone()
-            user = user.name
+            username = user.display_name
             icon = user.avatar_url
             cursor.close()
             db.close()
@@ -56,11 +57,11 @@ class EmotionCog(commands.Cog, name='User_Data'):
             cursor.execute(f"SELECT joy, sadness, anger, fear, love, surprise FROM emotion_data "
                            f"WHERE guild_id = '{ctx.message.guild.id}' AND user_id = '{ctx.message.author.id}'")
             result = cursor.fetchone()
-            user = ctx.message.author.display_name
+            username = ctx.message.author.display_name
             icon = ctx.message.author.avatar_url
             cursor.close()
             db.close()
-        await ctx.send(embed=message_util.embed(user=user, icon=icon, title='__**Emotion Stats**__',
+        await ctx.send(embed=message_util.embed(user=username, icon=icon, title='__**Emotion Stats**__',
                                                 thumbnail='http://discord.com/assets/626aaed496ac12bbdb68a86b46871a1f.svg',
                                                 description = f"{emot_util.emoji['joy']} Joy: {str(result[0])}\n"
                                                               f"{emot_util.emoji['sadness']} Sadness: {str(result[1])}\n"
@@ -84,6 +85,21 @@ class EmotionCog(commands.Cog, name='User_Data'):
             await ctx.send(':x: User stats could not be reset!')
         cursor.close()
         db.close()
+
+    @commands.command()
+    async def leaderboard(self, ctx, category):
+        db = sqlite3.connect('main.sqlite')
+        cursor = db.cursor()
+        cursor.execute(f"SELECT user_id, {category} FROM emotion_data ORDER BY {category} DESC")
+        result = cursor.fetchall()
+        leaderboard = ""
+        leader = await self.bot.fetch_user(int(result[0][0]))
+        for count, row in enumerate(result):
+            user = await self.bot.fetch_user(int(row[0]))
+            leaderboard += f"{count+1}. **{user.display_name}** - {row[1]}\n"
+        await ctx.send(embed=message_util.embed(title=f':trophy:\t{category} Leaderboard\t:trophy:', thumbnail= leader.avatar_url,
+        description=leaderboard))
+
 
 
 def setup(bot):
